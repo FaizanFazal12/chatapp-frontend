@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGetOneToOneChatQuery } from '@/store/api/messageApi';
 import { useUser } from '@/context/UserProvider';
 import { useSocket } from '@/context/SocketProvider';
+import { MicrophoneIcon, PaperAirplaneIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 const Chat = ({ sender, selectedUser }) => {
   const [message, setMessage] = useState('');
@@ -15,19 +16,19 @@ const Chat = ({ sender, selectedUser }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const { data, isLoading, error, refetch } = useGetOneToOneChatQuery(
+  const { data, isLoading, error } = useGetOneToOneChatQuery(
     { sender_id: sender?.id, receiver_id: selectedUser?.id },
     { skip: !sender?.id || !selectedUser?.id }
   );
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, data?.messages]);
 
-  // Initialize messages when data changes
   useEffect(() => {
     if (data?.messages) {
       setMessages(data.messages);
@@ -36,10 +37,8 @@ const Chat = ({ sender, selectedUser }) => {
 
   const handleSendMessage = useCallback((e) => {
     e.preventDefault();
-  
     if (!message.trim() || !selectedUser || !data?.chat?.id) return;
 
-    // Emit the message event
     socket.emit('send_message', {
       chat_id: data.chat.id,
       content: message.trim(),
@@ -51,31 +50,23 @@ const Chat = ({ sender, selectedUser }) => {
   }, [message, selectedUser, user, data?.chat?.id, socket]);
 
   const handleReceiveMessage = useCallback((newMessage) => {
-    console.log('newMessage', newMessage);
     setMessages(prev => [...prev, newMessage]);
   }, []);
 
-  // Socket event listeners
   useEffect(() => {
     if (!socket || !data?.chat?.id) return;
 
-    // Join the chat room
     socket.emit('join', data.chat.id);
-
-    // Listen for new messages
     socket.on('receive_message', handleReceiveMessage);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
-      socket.off('join');
       socket.emit('leave', data.chat.id);
-      // refetch();
     };
   }, [socket, data?.chat?.id, handleReceiveMessage]);
 
   const startRecording = async () => {
     try {
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -93,15 +84,7 @@ const Chat = ({ sender, selectedUser }) => {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (error) {
-      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        alert("No microphone found.");
-      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        alert("Microphone access denied by the user.");
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        alert("Microphone is in use or cannot be accessed.");
-      } else {
-        // console.error("Error accessing microphone:", error);
-      }
+      alert('Microphone access error: ' + error.message);
     }
   };
 
@@ -116,8 +99,6 @@ const Chat = ({ sender, selectedUser }) => {
   const handleSendVoiceNote = async () => {
     if (!audioBlob || !selectedUser || !data?.chat?.id) return;
 
-
-    // Emit the voice note event
     socket.emit('send_voice_note', {
       chat_id: data.chat.id,
       audio: audioBlob,
@@ -130,120 +111,80 @@ const Chat = ({ sender, selectedUser }) => {
 
   if (!selectedUser) {
     return (
-      <section style={{ flex: 1, padding: '2rem', background: '#fff', height: '100vh', overflowY: 'auto' }}>
-        <h2>Chat Area</h2>
-        <div style={{ marginTop: '2rem', color: '#888' }}>
-          Select a user to start chatting.
-        </div>
+      <section className="flex-1 p-8 bg-white h-screen overflow-y-auto">
+        <h2 className="text-2xl font-semibold">Chat Area</h2>
+        <div className="mt-8 text-gray-500">Select a user to start chatting.</div>
       </section>
     );
   }
 
   return (
-    <section style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <div style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
-        <h2>Chat with {selectedUser.name}</h2>
+    <section className="flex-1 flex flex-col h-screen bg-gray-50">
+      <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2 sm:gap-6">
+        <h2 className="text-lg font-semibold text-gray-800">Chat with {selectedUser.name}</h2>
       </div>
 
-      <div style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+      <div className="flex-1 p-4 overflow-y-auto space-y-3">
         {isLoading && <div>Loading messages...</div>}
-        {error && <div style={{ color: 'red' }}>Failed to load messages.</div>}
+        {error && <div className="text-red-500">Failed to load messages.</div>}
 
-        {data?.chat?.messages?.map((msg) => (
-          <div
-            key={msg.id}
-            style={{
-              marginBottom: '1rem',
-              padding: '0.5rem',
-              background: msg.sender_id === selectedUser?.id ? '#e3f2fd' : '#f5f5f5',
-              borderRadius: '8px',
-              maxWidth: '70%',
-              marginLeft: msg.sender_id === selectedUser?.id ? 'auto' : '0',
-            }}
-          >
-            <strong>{msg?.sender?.name}:</strong>
-            {msg.type === 'voice' ? (
-              <audio controls src={`${process.env.NEXT_PUBLIC_API_URL}${msg.content}`} style={{ marginTop: '0.5rem' }} />
-            ) : (
-              msg.content
-            )}
-          </div>
-        ))}
-        {messages?.map((msg) => (
-          <div
-            key={msg.id}
-            style={{
-              marginBottom: '1rem',
-              padding: '0.5rem',
-              background: msg.sender_id === selectedUser?.id ? '#e3f2fd' : '#f5f5f5',
-              borderRadius: '8px',
-              maxWidth: '70%',
-              marginLeft: msg.sender_id === selectedUser?.id ? 'auto' : '0',
-            }}
-          >
-            <strong>{msg?.sender?.name}:</strong>
-            {msg.type === 'voice' ? (
-              <audio controls src={`${process.env.NEXT_PUBLIC_API_URL}${msg.content}`} style={{ marginTop: '0.5rem' }} />
-            ) : (
-              msg.content
-            )}
-          </div>
-        ))}
+        {[...(data?.chat?.messages || []), ...messages].map((msg) => {
+          const isSelf = msg.sender_id === user?.id;
+          return (
+            <div
+              key={msg.id}
+              className={`flex items-end ${isSelf ? 'justify-end' : 'justify-start'}`}
+            >
+              {!isSelf && (
+                <div className="mr-2 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
+                  {msg?.sender?.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className={`rounded-lg px-4 py-2 max-w-xs shadow ${isSelf ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}> 
+                <div className="text-xs font-semibold mb-1">{msg?.sender?.name}</div>
+                {msg.type === 'voice' ? (
+                  <audio
+                    controls
+                    src={`${process.env.NEXT_PUBLIC_API_URL}${msg.content}`}
+                    className="mt-1 w-[300px]"
+                  />
+                ) : (
+                  <span>{msg.content}</span>
+                )}
+              </div>
+              {isSelf && (
+                <div className="ml-2 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">
+                  {user?.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
       <form
         onSubmit={handleSendMessage}
-        style={{
-          padding: '1rem',
-          borderTop: '1px solid #eee',
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-        }}
+        className="p-4 border-t border-gray-200 bg-white flex items-center gap-2"
       >
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
-          style={{
-            flex: 1,
-            padding: '0.5rem',
-            borderRadius: '4px',
-            border: '1px solid #ddd',
-          }}
-        />
         {audioBlob ? (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <audio controls src={URL.createObjectURL(audioBlob)} style={{ maxWidth: '200px' }} />
+          <div className="flex items-center gap-2">
+            <audio controls src={URL.createObjectURL(audioBlob)} className="w-40" />
             <button
               type="button"
               onClick={handleSendVoiceNote}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+              title="Send Voice Note"
             >
-              Send Voice Note
+              <PaperAirplaneIcon className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => setAudioBlob(null)}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+              title="Cancel"
             >
-              Cancel
+              <XCircleIcon className="h-5 w-5" />
             </button>
           </div>
         ) : (
@@ -251,29 +192,25 @@ const Chat = ({ sender, selectedUser }) => {
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
-              style={{
-                padding: '0.5rem 1rem',
-                background: isRecording ? '#dc3545' : '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className={`p-2 rounded-full transition ${isRecording ? 'bg-red-100' : 'bg-gray-100'} hover:bg-blue-100`}
+              title={isRecording ? 'Stop Recording' : 'Start Recording'}
             >
-              {isRecording ? 'Stop Recording' : 'Record Voice Note'}
+              <MicrophoneIcon className={`h-6 w-6 ${isRecording ? 'text-red-500' : 'text-gray-500'}`} />
             </button>
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              disabled={!!audioBlob}
+            />
             <button
               type="submit"
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition text-white"
+              disabled={!!audioBlob}
             >
-              Send
+              <PaperAirplaneIcon className="h-6 w-6 rotate-90" />
             </button>
           </>
         )}
@@ -282,4 +219,4 @@ const Chat = ({ sender, selectedUser }) => {
   );
 };
 
-export default Chat; 
+export default Chat;

@@ -4,6 +4,7 @@ import { useGetUsersQuery } from '@/store/api/userApi';
 import { useGetGroupsQuery } from '@/store/api/messageApi';
 import { useRouter } from 'next/navigation';
 import CreateGroupModal from './CreateGroupModal';
+import { UserGroupIcon, UserIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
 
 const UserList = () => {
   const router = useRouter();
@@ -20,60 +21,42 @@ const UserList = () => {
   };
 
   return (
-    <aside style={{ width: '250px', background: '#f4f4f4', height: '100vh', padding: '1rem', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+    <aside className="w-64 bg-white h-screen p-4 flex flex-col border-r border-gray-200">
+      <div className="flex gap-2 mb-4">
         <button
           onClick={() => setActiveTab('users')}
-          style={{
-            padding: '0.5rem 1rem',
-            background: activeTab === 'users' ? '#007bff' : '#fff',
-            color: activeTab === 'users' ? '#fff' : '#000',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'users' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
         >
-          Users
+          <UserIcon className="h-5 w-5" /> Users
         </button>
         <button
           onClick={() => setActiveTab('groups')}
-          style={{
-            padding: '0.5rem 1rem',
-            background: activeTab === 'groups' ? '#007bff' : '#fff',
-            color: activeTab === 'groups' ? '#fff' : '#000',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'groups' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
         >
-          Groups
+          <UserGroupIcon className="h-5 w-5" /> Groups
         </button>
       </div>
 
       {activeTab === 'users' ? (
         <>
-          <h2>Users</h2>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <h2 className="text-lg font-semibold mb-2 text-gray-800">Users</h2>
+          <ul className="space-y-2 overflow-y-auto flex-1">
             {usersLoading ? (
               <li>Loading users...</li>
             ) : (
               users?.map(user => (
                 <li
                   key={user.id}
-                  style={{
-                    margin: '1rem 0',
-                    padding: '0.5rem',
-                    background: selectedUserId === user.id ? '#d0eaff' : '#fff',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: selectedUserId === user.id ? 'bold' : 'normal',
-                  }}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedUserId === user.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
                   onClick={() => {
                     setSelectedUserId(user.id);
                     router.push(`/dashboard/chat/${user.id}`);
                   }}
                 >
-                  {user.name}
+                  <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-base">
+                    {user.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <span className="truncate">{user.name}</span>
                 </li>
               ))
             )}
@@ -81,43 +64,33 @@ const UserList = () => {
         </>
       ) : (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2>Groups</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold text-gray-800">Groups</h2>
             <button
               onClick={() => setIsCreateGroupModalOpen(true)}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
             >
-              Create Group
+              <PlusCircleIcon className="h-5 w-5" />
+              Create
             </button>
           </div>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="space-y-2 overflow-y-auto flex-1">
             {groupsLoading ? (
               <li>Loading groups...</li>
             ) : (
               groups?.groups?.map(group => (
                 <li
                   key={group.id}
-                  style={{
-                    margin: '1rem 0',
-                    padding: '0.5rem',
-                    background: selectedGroupId === group.id ? '#d0eaff' : '#fff',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: selectedGroupId === group.id ? 'bold' : 'normal',
-                  }}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedGroupId === group.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
                   onClick={() => {
                     setSelectedGroupId(group.id);
                     router.push(`/dashboard/group/${group.id}`);
                   }}
                 >
-                  {group.name}
+                  <div className="w-9 h-9 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold text-base">
+                    {group.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <span className="truncate">{group.name}</span>
                 </li>
               ))
             )}
