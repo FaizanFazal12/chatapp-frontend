@@ -1,36 +1,50 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGetUsersQuery } from '@/store/api/userApi';
 import { useGetGroupsQuery } from '@/store/api/messageApi';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import CreateGroupModal from './CreateGroupModal';
 import { UserGroupIcon, UserIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
 
 const UserList = () => {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
   const { data: users, isLoading: usersLoading } = useGetUsersQuery();
   const { data: groups, isLoading: groupsLoading } = useGetGroupsQuery();
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const [selectedGroupId, setSelectedGroupId] = useState(null);
-  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'groups'
+  const [activeTab, setActiveTab] = useState('users');
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
 
+  // Determine selected user/group from URL
+  const selectedUserId = pathname.startsWith('/dashboard/chat/') ? params.userId : null;
+  const selectedGroupId = pathname.startsWith('/dashboard/group/') ? params.groupId : null;
+
+  
+  useEffect(() => {
+    setActiveTab(selectedUserId ? 'users' : 'groups');
+  }, [selectedUserId, selectedGroupId]);
   const handleGroupCreated = (newGroup) => {
     setActiveTab('groups');
     router.push(`/dashboard/group/${newGroup.id}`);
   };
 
+
+
   return (
     <aside className="w-64 bg-white h-screen p-4 flex flex-col border-r border-gray-200">
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() => setActiveTab('users')}
+          onClick={() => {
+            setActiveTab('users');
+          }}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'users' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
         >
           <UserIcon className="h-5 w-5" /> Users
         </button>
         <button
-          onClick={() => setActiveTab('groups')}
+          onClick={() => {
+            setActiveTab('groups');
+          }}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'groups' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
         >
           <UserGroupIcon className="h-5 w-5" /> Groups
@@ -47,9 +61,8 @@ const UserList = () => {
               users?.map(user => (
                 <li
                   key={user.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedUserId === user.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedUserId == user.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
                   onClick={() => {
-                    setSelectedUserId(user.id);
                     router.push(`/dashboard/chat/${user.id}`);
                   }}
                 >
@@ -81,9 +94,8 @@ const UserList = () => {
               groups?.groups?.map(group => (
                 <li
                   key={group.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedGroupId === group.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedGroupId == group.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
                   onClick={() => {
-                    setSelectedGroupId(group.id);
                     router.push(`/dashboard/group/${group.id}`);
                   }}
                 >

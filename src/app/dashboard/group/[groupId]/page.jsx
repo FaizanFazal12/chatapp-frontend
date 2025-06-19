@@ -69,7 +69,8 @@ export default function GroupChatPage() {
 
     const handleRemoveUser = async (userId) => {
         if (!confirm('Are you sure you want to remove this user from the group?')) return;
-        socket.emit('remove_user_from_group', { group_id: groupId, user_id: userId, admin_id: user?.id });
+        removeUser({ group_id: groupId, user_id: userId, admin_id: user?.id });
+
         refetch();
     };
 
