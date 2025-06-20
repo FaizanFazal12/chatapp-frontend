@@ -56,12 +56,27 @@ export const messageApi = commonApi.injectEndpoints({
       }),
       invalidatesTags: ['Groups'],
     }),
+    sendMessageWithAttachment: builder.mutation({
+      query: (data) => ({
+        url: `/chat/send-message-with-attachment`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+      sendGroupMessageWithAttachment: builder.mutation({
+        query: (data) => ({
+          url: `/chat/send-group-message-with-attachment`,
+          method: 'POST',
+          body: data,
+        }),
+      }),
+     
   }),
   overrideExisting: true,
 });
 
 export const {
-  useGetChatMessagesQuery,
+  useGetChatMessagesQuery,  
   useGetOneToOneChatQuery,
   useGetChatsQuery,
   useGetGroupsQuery,
@@ -69,4 +84,6 @@ export const {
   useCreateGroupMutation,
   useRemoveUserFromGroupMutation,
   useAddUsersToGroupMutation,
+  useSendMessageWithAttachmentMutation,
+  useSendGroupMessageWithAttachmentMutation,
 } = messageApi; 

@@ -1,11 +1,11 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/context/UserProvider';
-import { useGetGroupChatQuery, useRemoveUserFromGroupMutation, useAddUsersToGroupMutation } from '@/store/api/messageApi';
+import { useGetGroupChatQuery, useRemoveUserFromGroupMutation, useAddUsersToGroupMutation, useSendGroupMessageWithAttachmentMutation } from '@/store/api/messageApi';
 import { useGetUsersQuery } from '@/store/api/userApi';
 import { useSocket } from '@/context/SocketProvider';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { UserPlusIcon, UserMinusIcon, PaperAirplaneIcon, MicrophoneIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { UserPlusIcon, UserMinusIcon, PaperAirplaneIcon, MicrophoneIcon, XCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/24/solid';
 
 export default function GroupChatPage() {
     const { groupId } = useParams();
@@ -25,6 +25,8 @@ export default function GroupChatPage() {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const [audioBlob, setAudioBlob] = useState(null);
+    const [sendGroupMessageWithAttachment] = useSendGroupMessageWithAttachmentMutation();
+    const [pendingAttachment, setPendingAttachment] = useState(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -136,6 +138,35 @@ export default function GroupChatPage() {
         setAudioBlob(null);
     };
 
+
+
+
+
+    const handleSendAttachment = async () => {
+        if (!pendingAttachment || !groupId) return;
+
+        const formData = new FormData();
+        formData.append('attachment', pendingAttachment);
+        formData.append('group_id', groupId);
+        formData.append('content', message);
+
+        try {
+            await sendGroupMessageWithAttachment(formData).unwrap();
+            setPendingAttachment(null);
+            setMessage('');
+        } catch (error) {
+            alert(error?.message || 'Cannot send attachment');
+        }
+    };
+    const handleAttachmentChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setPendingAttachment(file);
+    };
+
+    const handleCancelAttachment = () => {
+        setPendingAttachment(null);
+    };
     if (isLoading) return <div className="p-6">Loading...</div>;
 
     if (!groupChat) {
@@ -236,8 +267,18 @@ export default function GroupChatPage() {
                             <div className="text-xs font-semibold mb-1">{msg?.user?.name}</div>
                             {msg.type === 'voice' ? (
                                 <audio controls src={`${process.env.NEXT_PUBLIC_API_URL}${msg.content}`} className="mt-1 w-[300px]" />
-                            ) : (
-                                <span>{msg.content}</span>
+                            ) :  msg.type === 'attachment' ? (
+                            <a
+                                href={`${process.env.NEXT_PUBLIC_API_URL}${msg.attachmentUrl}`}
+                                download={msg.attachmentName}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white underline break-all"
+                            >
+                                📎 {msg.attachmentName || 'Download file'}
+                            </a>
+                            ) :(
+                            <span>{msg.content}</span>
                             )}
                         </div>
                         {msg.user_id === user?.id && (
@@ -274,33 +315,57 @@ export default function GroupChatPage() {
                             <XCircleIcon className="h-5 w-5" />
                         </button>
                     </div>
-                ) : (
-                    <>
-                        <button
-                            type="button"
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`p-2 rounded-full transition ${isRecording ? 'bg-red-100' : 'bg-gray-100'} hover:bg-blue-100`}
-                            title={isRecording ? 'Stop Recording' : 'Start Recording'}
-                        >
-                            <MicrophoneIcon className={`h-6 w-6 ${isRecording ? 'text-red-500' : 'text-gray-500'}`} />
+                ) : pendingAttachment ? (
+                    <div className="flex items-center gap-3">
+                        {pendingAttachment.type.startsWith('image/') ? (
+                            <img
+                                src={URL.createObjectURL(pendingAttachment)}
+                                alt="Attachment Preview"
+                                className="w-20 h-20 object-cover rounded"
+                            />
+                        ) : (
+                            <div className="text-sm text-gray-700">📄 {pendingAttachment.name}</div>
+                        )}
+                        <button type="button" onClick={handleSendAttachment} className="p-2 bg-green-500 text-white rounded-full">
+                            <PaperAirplaneIcon className="h-5 w-5" />
                         </button>
-                        <input
-                            type="text"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            disabled={!!audioBlob}
-                        />
-                        <button
-                            type="submit"
-                            className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition text-white"
-                            disabled={!!audioBlob}
-                        >
-                            <PaperAirplaneIcon className="h-6 w-6 rotate-90" />
+                        <button type="button" onClick={handleCancelAttachment} className="p-2 bg-red-500 text-white rounded-full">
+                            <XCircleIcon className="h-5 w-5" />
                         </button>
-                    </>
-                )}
+                    </div>
+                ) :
+
+                    (
+                        <>
+                            <button
+                                type="button"
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={`p-2 rounded-full transition ${isRecording ? 'bg-red-100' : 'bg-gray-100'} hover:bg-blue-100`}
+                                title={isRecording ? 'Stop Recording' : 'Start Recording'}
+                            >
+                                <MicrophoneIcon className={`h-6 w-6 ${isRecording ? 'text-red-500' : 'text-gray-500'}`} />
+                            </button>
+                            <input
+                                type="text"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                placeholder="Type a message..."
+                                className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                disabled={!!audioBlob}
+                            />
+                            <label htmlFor="attachment" className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full cursor-pointer">
+                                <ClipboardDocumentIcon className="h-6 w-6" />
+                            </label>
+                            <input type="file" id="attachment" className="hidden" onChange={handleAttachmentChange} />
+                            <button
+                                type="submit"
+                                className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition text-white"
+                                disabled={!!audioBlob}
+                            >
+                                <PaperAirplaneIcon className="h-6 w-6 rotate-90" />
+                            </button>
+                        </>
+                    )}
             </form>
         </section>
     );

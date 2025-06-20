@@ -28,6 +28,19 @@ export const userApi = commonApi.injectEndpoints({
                 method: "GET",
             }),
         }),
+        logoutUser: builder.mutation({
+            query: () => ({
+                url: `/user/logout`,
+                method: "POST",
+            }),
+        }),
+        getMe: builder.query({
+            query: () => ({
+                url: `/user/me`,
+                method: "GET",
+            }),
+        }),
+        
     }),
     overrideExisting: true,
 });
@@ -37,4 +50,6 @@ export const {
     useGetUsersQuery,
     useRegisterUserMutation,
     useGetUserByIdQuery,
+    useLogoutUserMutation,
+    useGetMeQuery,
 } = userApi;

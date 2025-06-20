@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-
+import { usePathname } from 'next/navigation';
 
 
 const userContext = createContext(null);
@@ -14,6 +14,7 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const pathname = usePathname();
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -21,9 +22,13 @@ export const UserProvider = ({ children }) => {
                     credentials: 'include',
                 });
 
-                if (!res.ok) throw new Error('Not authenticated');
+                if (!res.ok) {
+                    if (pathname !== '/') {
+                        window.location.href = '/';
+                        return;
+                    }
+                }
                 const data = await res.json();
-                console.log(data);
                 setUser(data.user);
             } catch (err) {
                 setUser(null);

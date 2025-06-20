@@ -1,10 +1,11 @@
 'use client'
 import React, { useEffect, useState } from 'react';
-import { useGetUsersQuery } from '@/store/api/userApi';
+import { useGetUsersQuery, useLogoutUserMutation } from '@/store/api/userApi';
 import { useGetGroupsQuery } from '@/store/api/messageApi';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import CreateGroupModal from './CreateGroupModal';
-import { UserGroupIcon, UserIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
+import { UserGroupIcon, UserIcon, PlusCircleIcon, PowerIcon } from '@heroicons/react/24/solid';
+import { useUser } from '@/context/UserProvider';
 
 const UserList = () => {
   const router = useRouter();
@@ -14,21 +15,31 @@ const UserList = () => {
   const { data: groups, isLoading: groupsLoading } = useGetGroupsQuery();
   const [activeTab, setActiveTab] = useState('users');
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [logoutUser, { isSuccess }] = useLogoutUserMutation();
 
-  // Determine selected user/group from URL
   const selectedUserId = pathname.startsWith('/dashboard/chat/') ? params.userId : null;
   const selectedGroupId = pathname.startsWith('/dashboard/group/') ? params.groupId : null;
 
-  
   useEffect(() => {
-    setActiveTab(selectedUserId ? 'users' : 'groups');
-  }, [selectedUserId, selectedGroupId]);
+    setActiveTab(selectedGroupId ? 'groups' : 'users');
+    if (isSuccess) {
+      router.push('/');
+    }
+  }, [selectedUserId, selectedGroupId, isSuccess]);
+
   const handleGroupCreated = (newGroup) => {
     setActiveTab('groups');
     router.push(`/dashboard/group/${newGroup.id}`);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logoutUser().unwrap();
 
+    } catch (err) {
+      alert('Logout failed');
+    }
+  };
 
   return (
     <aside className="w-64 bg-white h-screen p-4 flex flex-col border-r border-gray-200">
@@ -115,6 +126,12 @@ const UserList = () => {
         onClose={() => setIsCreateGroupModalOpen(false)}
         onGroupCreated={handleGroupCreated}
       />
+      <button
+        onClick={handleLogout}
+        className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition font-medium justify-center"
+      >
+        <PowerIcon className="h-5 w-5" /> Logout
+      </button>
     </aside>
   )
 }
