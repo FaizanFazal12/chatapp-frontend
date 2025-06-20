@@ -273,7 +273,7 @@ export default function GroupChatPage() {
                                 download={msg.attachmentName}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-white underline break-all"
+                                className={`${msg.user_id === user?.id ? 'text-white' : 'text-gray-800'} underline break-all`}
                             >
                                 📎 {msg.attachmentName || 'Download file'}
                             </a>
@@ -356,7 +356,7 @@ export default function GroupChatPage() {
                             <label htmlFor="attachment" className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full cursor-pointer">
                                 <ClipboardDocumentIcon className="h-6 w-6" />
                             </label>
-                            <input type="file" id="attachment" className="hidden" onChange={handleAttachmentChange} />
+                            <input type="file" id="attachment" className="hidden" onChange={handleAttachmentChange}  accept='image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation'/>
                             <button
                                 type="submit"
                                 className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition text-white"

@@ -5,7 +5,6 @@ import { useGetGroupsQuery } from '@/store/api/messageApi';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import CreateGroupModal from './CreateGroupModal';
 import { UserGroupIcon, UserIcon, PlusCircleIcon, PowerIcon } from '@heroicons/react/24/solid';
-import { useUser } from '@/context/UserProvider';
 
 const UserList = () => {
   const router = useRouter();
