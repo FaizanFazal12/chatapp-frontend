@@ -5,26 +5,47 @@ import { useGetGroupsQuery } from '@/store/api/messageApi';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import CreateGroupModal from './CreateGroupModal';
 import { UserGroupIcon, UserIcon, PlusCircleIcon, PowerIcon } from '@heroicons/react/24/solid';
+import { useSocket } from '@/context/SocketProvider';
+import { useUser } from '@/context/UserProvider';
 
 const UserList = () => {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
+  const socket = useSocket();
   const { data: users, isLoading: usersLoading } = useGetUsersQuery();
   const { data: groups, isLoading: groupsLoading } = useGetGroupsQuery();
   const [activeTab, setActiveTab] = useState('users');
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [logoutUser, { isSuccess }] = useLogoutUserMutation();
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const { user } = useUser();
+
 
   const selectedUserId = pathname.startsWith('/dashboard/chat/') ? params.userId : null;
   const selectedGroupId = pathname.startsWith('/dashboard/group/') ? params.groupId : null;
 
+  useEffect(() => {
+
+    socket.emit('user_connected', user?.id);
+    socket.on('update_users', (users) => {
+      setOnlineUsers(users);
+    });
+
+    return () => {
+      socket.off('update_users');
+      socket.off('user_connected');
+    };
+
+  }, [socket, user]);
   useEffect(() => {
     setActiveTab(selectedGroupId ? 'groups' : 'users');
     if (isSuccess) {
       router.push('/');
     }
   }, [selectedUserId, selectedGroupId, isSuccess]);
+
+
 
   const handleGroupCreated = (newGroup) => {
     setActiveTab('groups');
@@ -33,6 +54,7 @@ const UserList = () => {
 
   const handleLogout = async () => {
     try {
+      socket.disconnect();
       await logoutUser().unwrap();
 
     } catch (err) {
@@ -40,6 +62,7 @@ const UserList = () => {
     }
   };
 
+  console.log('onlineUsers', onlineUsers);
   return (
     <aside className="w-64 bg-white h-screen p-4 flex flex-col border-r border-gray-200">
       <div className="flex gap-2 mb-4">
@@ -77,9 +100,10 @@ const UserList = () => {
                   }}
                 >
                   <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-base">
-                    {user.name?.[0]?.toUpperCase() || '?'}
+                    {user.name?.[0]?.toUpperCase() || '?'} 
                   </div>
                   <span className="truncate">{user.name}</span>
+                  <p>{onlineUsers.includes(user.id) ? <span className="text-xs text-green-500">Online</span> : <span className="text-xs text-red-500">Offline</span>}</p>
                 </li>
               ))
             )}

@@ -139,9 +139,6 @@ export default function GroupChatPage() {
     };
 
 
-
-
-
     const handleSendAttachment = async () => {
         if (!pendingAttachment || !groupId) return;
 
@@ -267,18 +264,18 @@ export default function GroupChatPage() {
                             <div className="text-xs font-semibold mb-1">{msg?.user?.name}</div>
                             {msg.type === 'voice' ? (
                                 <audio controls src={`${process.env.NEXT_PUBLIC_API_URL}${msg.content}`} className="mt-1 w-[300px]" />
-                            ) :  msg.type === 'attachment' ? (
-                            <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL}${msg.attachmentUrl}`}
-                                download={msg.attachmentName}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`${msg.user_id === user?.id ? 'text-white' : 'text-gray-800'} underline break-all`}
-                            >
-                                📎 {msg.attachmentName || 'Download file'}
-                            </a>
-                            ) :(
-                            <span>{msg.content}</span>
+                            ) : msg.type === 'attachment' ? (
+                                <a
+                                    href={`${process.env.NEXT_PUBLIC_API_URL}${msg.attachmentUrl}`}
+                                    download={msg.attachmentName}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${msg.user_id === user?.id ? 'text-white' : 'text-gray-800'} underline break-all`}
+                                >
+                                    📎 {msg.attachmentName || 'Download file'}
+                                </a>
+                            ) : (
+                                <span>{msg.content}</span>
                             )}
                         </div>
                         {msg.user_id === user?.id && (
@@ -356,7 +353,7 @@ export default function GroupChatPage() {
                             <label htmlFor="attachment" className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full cursor-pointer">
                                 <ClipboardDocumentIcon className="h-6 w-6" />
                             </label>
-                            <input type="file" id="attachment" className="hidden" onChange={handleAttachmentChange}  accept='image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation'/>
+                            <input type="file" id="attachment" className="hidden" onChange={handleAttachmentChange} accept='image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation' />
                             <button
                                 type="submit"
                                 className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition text-white"

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useLoginUserMutation, useRegisterUserMutation } from "@/store/api/userApi";
 import { useUser } from "@/context/UserProvider";
 import { useRouter } from "next/navigation";
+import { useSocket } from "@/context/SocketProvider";
 
 export default function Home() {
   const [isRegister, setIsRegister] = useState(false);
@@ -10,7 +11,7 @@ export default function Home() {
   const [registerUser, { isLoading: isRegisterLoading, error: registerError }] = useRegisterUserMutation();
   const { setUser, user } = useUser();
   const router = useRouter();
-
+  const socket = useSocket();
   const handleLogin = async (e) => {
     e.preventDefault();
     try{
@@ -19,6 +20,7 @@ export default function Home() {
         password: e.target.password.value
       }).unwrap();
       setUser(response.user);
+      socket.connect();
       router.push('/dashboard')
     }
     catch(error){
@@ -36,6 +38,7 @@ export default function Home() {
       }).unwrap();
       alert(response.message)
       setUser(response.user);
+      socket.connect();
       router.push('/dashboard')
     }
     catch (error) {
