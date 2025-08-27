@@ -1,12 +1,17 @@
-'use client'
-import React, { useEffect, useState } from 'react';
-import { useGetUsersQuery, useLogoutUserMutation } from '@/store/api/userApi';
-import { useGetGroupsQuery } from '@/store/api/messageApi';
-import { useRouter, usePathname, useParams } from 'next/navigation';
-import CreateGroupModal from './CreateGroupModal';
-import { UserGroupIcon, UserIcon, PlusCircleIcon, PowerIcon } from '@heroicons/react/24/solid';
-import { useSocket } from '@/context/SocketProvider';
-import { useUser } from '@/context/UserProvider';
+"use client";
+import React, { useEffect, useState } from "react";
+import { useGetUsersQuery, useLogoutUserMutation } from "@/store/api/userApi";
+import { useGetGroupsQuery } from "@/store/api/messageApi";
+import { useRouter, usePathname, useParams } from "next/navigation";
+import CreateGroupModal from "./CreateGroupModal";
+import {
+  UserGroupIcon,
+  UserIcon,
+  PlusCircleIcon,
+  PowerIcon,
+} from "@heroicons/react/24/solid";
+import { useSocket } from "@/context/SocketProvider";
+import { useUser } from "@/context/UserProvider";
 
 const UserList = () => {
   const router = useRouter();
@@ -15,40 +20,42 @@ const UserList = () => {
   const socket = useSocket();
   const { data: users, isLoading: usersLoading } = useGetUsersQuery();
   const { data: groups, isLoading: groupsLoading } = useGetGroupsQuery();
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState("users");
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [logoutUser, { isSuccess }] = useLogoutUserMutation();
   const [onlineUsers, setOnlineUsers] = useState([]);
   const { user } = useUser();
 
-
-  const selectedUserId = pathname.startsWith('/dashboard/chat/') ? params.userId : null;
-  const selectedGroupId = pathname.startsWith('/dashboard/group/') ? params.groupId : null;
+  const selectedUserId = pathname.startsWith("/dashboard/chat/")
+    ? params.userId
+    : null;
+  const selectedGroupId = pathname.startsWith("/dashboard/group/")
+    ? params.groupId
+    : null;
 
   useEffect(() => {
-
-    socket.emit('user_connected', user?.id);
-    socket.on('update_users', (users) => {
+    socket.emit("user_connected", user?.id);
+    
+    socket.on("update_users", (users) => {
       setOnlineUsers(users);
     });
 
     return () => {
-      socket.off('update_users');
-      socket.off('user_connected');
+      socket.off("update_users");
+      socket.off("user_connected");
     };
-
   }, [socket, user]);
+
+  
   useEffect(() => {
-    setActiveTab(selectedGroupId ? 'groups' : 'users');
+    setActiveTab(selectedGroupId ? "groups" : "users");
     if (isSuccess) {
-      router.push('/');
+      router.push("/");
     }
   }, [selectedUserId, selectedGroupId, isSuccess]);
 
-
-
   const handleGroupCreated = (newGroup) => {
-    setActiveTab('groups');
+    setActiveTab("groups");
     router.push(`/dashboard/group/${newGroup.id}`);
   };
 
@@ -56,54 +63,70 @@ const UserList = () => {
     try {
       socket.disconnect();
       await logoutUser().unwrap();
-
     } catch (err) {
-      alert('Logout failed');
+      alert("Logout failed");
     }
   };
 
-  console.log('onlineUsers', onlineUsers);
   return (
     <aside className="w-64 bg-white h-screen p-4 flex flex-col border-r border-gray-200">
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => {
-            setActiveTab('users');
+            setActiveTab("users");
           }}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'users' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${
+            activeTab === "users"
+              ? "bg-blue-500 text-white shadow"
+              : "bg-gray-100 text-gray-700 hover:bg-blue-100"
+          }`}
         >
           <UserIcon className="h-5 w-5" /> Users
         </button>
         <button
           onClick={() => {
-            setActiveTab('groups');
+            setActiveTab("groups");
           }}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${activeTab === 'groups' ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-blue-100'}`}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition font-medium ${
+            activeTab === "groups"
+              ? "bg-blue-500 text-white shadow"
+              : "bg-gray-100 text-gray-700 hover:bg-blue-100"
+          }`}
         >
           <UserGroupIcon className="h-5 w-5" /> Groups
         </button>
       </div>
 
-      {activeTab === 'users' ? (
+      {activeTab === "users" ? (
         <>
           <h2 className="text-lg font-semibold mb-2 text-gray-800">Users</h2>
           <ul className="space-y-2 overflow-y-auto flex-1">
             {usersLoading ? (
               <li>Loading users...</li>
             ) : (
-              users?.map(user => (
+              users?.map((user) => (
                 <li
                   key={user.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedUserId == user.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                    selectedUserId == user.id
+                      ? "bg-blue-100 font-bold"
+                      : "hover:bg-gray-100"
+                  }`}
                   onClick={() => {
                     router.push(`/dashboard/chat/${user.id}`);
                   }}
                 >
                   <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-base">
-                    {user.name?.[0]?.toUpperCase() || '?'} 
+                    {user.name?.[0]?.toUpperCase() || "?"}
                   </div>
                   <span className="truncate">{user.name}</span>
-                  <p>{onlineUsers.includes(user.id) ? <span className="text-xs text-green-500">Online</span> : <span className="text-xs text-red-500">Offline</span>}</p>
+                  <p>
+                    {onlineUsers.includes(user.id) ? (
+                      <span className="text-xs text-green-500">Online</span>
+                    ) : (
+                      <span className="text-xs text-red-500">Offline</span>
+                    )}
+                  </p>
                 </li>
               ))
             )}
@@ -125,16 +148,20 @@ const UserList = () => {
             {groupsLoading ? (
               <li>Loading groups...</li>
             ) : (
-              groups?.groups?.map(group => (
+              groups?.groups?.map((group) => (
                 <li
                   key={group.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${selectedGroupId == group.id ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                    selectedGroupId == group.id
+                      ? "bg-blue-100 font-bold"
+                      : "hover:bg-gray-100"
+                  }`}
                   onClick={() => {
                     router.push(`/dashboard/group/${group.id}`);
                   }}
                 >
                   <div className="w-9 h-9 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold text-base">
-                    {group.name?.[0]?.toUpperCase() || '?'}
+                    {group.name?.[0]?.toUpperCase() || "?"}
                   </div>
                   <span className="truncate">{group.name}</span>
                 </li>
@@ -156,7 +183,7 @@ const UserList = () => {
         <PowerIcon className="h-5 w-5" /> Logout
       </button>
     </aside>
-  )
-}
+  );
+};
 
 export default UserList;

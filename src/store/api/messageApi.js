@@ -9,8 +9,8 @@ export const messageApi = commonApi.injectEndpoints({
       }),
     }),
     getOneToOneChat: builder.query({
-      query: ({ sender_id, receiver_id }) => ({
-        url: `/chat/get-chat/${sender_id}/${receiver_id}`,
+      query: ({ sender_id, receiver_id ,limit ,page }) => ({
+        url: `/chat/get-chat/${sender_id}/${receiver_id}?limit=${limit}&page=${page}`,
         method: 'GET',
       }),
     }),

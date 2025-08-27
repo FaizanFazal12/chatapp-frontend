@@ -57,11 +57,15 @@ export default function GroupChatPage() {
         setMessages(prev => [...prev, newMessage]);
     }, []);
 
+    const checkRemoveUser = useCallback((user_id) => {
+
+    }, [])
     useEffect(() => {
         if (!socket || !groupId) return;
 
         socket.emit('join_group', groupId);
         socket.on('receive_group_message', handleReceiveMessage);
+        socket.on('remove_group_user', checkRemoveUser);
 
         return () => {
             socket.off('receive_group_message', handleReceiveMessage);
