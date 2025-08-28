@@ -1,11 +1,15 @@
 "use client";
-import { CameraIcon } from "@heroicons/react/24/solid";
+import {
+  CameraIcon,
+  PhoneXMarkIcon,
+  MicrophoneIcon,
+} from "@heroicons/react/24/solid";
 import React, { useCallback, useEffect, useState } from "react";
 import { useSocket } from "@/context/SocketProvider";
 import { useParams } from "next/navigation";
 import { useUser } from "@/context/UserProvider";
 import peer from "@/services/peer";
-import ReactPlayer from "react-player";
+
 const SendVideoCallRequest = () => {
   const socket = useSocket();
   const { userId } = useParams();
@@ -14,13 +18,15 @@ const SendVideoCallRequest = () => {
   const [incomingOffer, setIncomingOffer] = useState(null);
   const [myStream, setMyStream] = useState(null);
   const [remoteSteam, setRemoteStream] = useState(null);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [camEnabled, setCamEnabled] = useState(true);
 
   const handleSendCallRequest = useCallback(async () => {
     try {
-      // const stream = await navigator.mediaDevices.getUserMedia({
-      //   audio: true,
-      //   video: true,
-      // });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
       const offer = await peer.getOffer();
 
       // // Add tracks immediately ✅
@@ -28,7 +34,7 @@ const SendVideoCallRequest = () => {
       //   peer.peer.addTrack(track, stream);
       // }
       socket.emit("call:request", { from: user, to: userId, offer });
-      // setMyStream(stream);
+      setMyStream(stream);
     } catch (error) {
       console.error("error", error);
     }
@@ -48,6 +54,9 @@ const SendVideoCallRequest = () => {
 
       setSender(null);
       setIncomingOffer(null);
+      for (const track of stream.getTracks()) {
+        peer.peer.addTrack(track, stream);
+      }
     },
     [socket, sender, user, myStream, incomingOffer]
   );
@@ -57,12 +66,6 @@ const SendVideoCallRequest = () => {
     setSender(null);
     setIncomingOffer(null);
   };
-
-  const sendStreams = useCallback(() => {
-    for (const track of myStream.getTracks()) {
-      peer.peer.addTrack(track, myStream);
-    }
-  }, [myStream]);
 
   const handleCallAccept = useCallback(
     async ({ from, ans }) => {
@@ -82,12 +85,63 @@ const SendVideoCallRequest = () => {
     [myStream]
   );
 
+  const handleCallEnd = useCallback(
+    ({ from }) => {
+      if (myStream) {
+        myStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        setMyStream(null);
+      }
+
+      if (remoteSteam) {
+        setRemoteStream(null);
+      }
+
+      // peer.close();
+    },
+    [myStream, remoteSteam, socket, user, userId]
+  );
+  // 🎤 Toggle microphone
+  const toggleMic = useCallback(() => {
+    if (myStream) {
+      myStream.getAudioTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+        setMicEnabled(track.enabled);
+      });
+    }
+  }, [micEnabled, myStream]);
+
+  // 📷 Toggle camera
+  const toggleCamera = useCallback(() => {
+    if (myStream) {
+      myStream.getVideoTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+        setCamEnabled(track.enabled);
+      });
+    }
+  }, [camEnabled, myStream]);
+
+  // ❌ End call
+  const handleEndCall = useCallback(async () => {
+    if (myStream) {
+      myStream.getTracks().forEach((track) => track.stop());
+      setMyStream(null);
+    }
+    if (remoteSteam) {
+      remoteSteam.getTracks().forEach((track) => track.stop());
+      setRemoteStream(null);
+    }
+    socket.emit("call:end", { from: user.id, to: userId });
+    // peer.close();
+  }, [myStream, remoteSteam]);
+
   const handleAcceptNego = useCallback(
     async ({ offer, from, to }) => {
       const ans = await peer.getAnswer(offer);
 
       socket.emit("nego:accepted", { to: from.id, ans });
-      sendStreams();
+      // sendStreams();
       // for (const track of myStream.getTracks()) {
       //   peer.peer.addTrack(track, myStream);
       // }
@@ -104,7 +158,7 @@ const SendVideoCallRequest = () => {
       // sendStreams();
       setRemoteStream(remoteSteam[0]);
     });
-  }, [ ]);
+  }, []);
 
   const handleFinalNego = useCallback(
     async ({ ans }) => {
@@ -143,14 +197,22 @@ const SendVideoCallRequest = () => {
     socket.on("call:accepted", handleCallAccept);
     socket.on("nego:offer", handleAcceptNego);
     socket.on("nego:accepted", handleFinalNego);
+    socket.on("call:end", handleCallEnd);
 
     return () => {
       socket.off("receive:call:request", onReceiveCall);
       socket.off("call:accepted", handleCallAccept);
       socket.off("nego:accepted", handleFinalNego);
       socket.off("nego:offer", handleAcceptNego);
+      socket.off("call:end", handleCallEnd);
     };
-  }, [socket, handleCallAccept, handleAcceptNego, handleFinalNego]);
+  }, [
+    socket,
+    handleCallAccept,
+    handleAcceptNego,
+    handleFinalNego,
+    handleCallEnd,
+  ]);
 
   return (
     <>
@@ -161,7 +223,7 @@ const SendVideoCallRequest = () => {
         <CameraIcon className="h-6 w-6 text-white" />
       </button>
 
-      {/* Modal */}
+      {/* Incoming Call Modal */}
       {sender && incomingOffer && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-80">
@@ -188,9 +250,12 @@ const SendVideoCallRequest = () => {
           </div>
         </div>
       )}
+
+      {/* Active Call Screen */}
       {(myStream || remoteSteam) && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80">
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-50 gap-4 p-4">
+          <div className="flex gap-4">
+            {/* My video */}
             <video
               ref={(videoEl) => {
                 if (videoEl && myStream) {
@@ -198,15 +263,10 @@ const SendVideoCallRequest = () => {
                 }
               }}
               autoPlay
-              muted
               playsInline
-              className="w-full h-auto rounded-lg"
+              className="w-auto h-96 rounded-lg bg-gray-900"
             />
-          </div>
-          {/* <button className="bg-purple-700" onClick={sendStreams}>
-            Send Stream
-          </button> */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80">
+            {/* Remote video */}
             <video
               ref={(videoEl) => {
                 if (videoEl && remoteSteam) {
@@ -214,10 +274,42 @@ const SendVideoCallRequest = () => {
                 }
               }}
               autoPlay
-              muted
               playsInline
-              className="w-full h-auto rounded-lg"
+              className="w-auto h-96  rounded-lg bg-gray-900"
             />
+          </div>
+
+          {/* Controls */}
+          <div className="flex gap-4 mt-4">
+            <button
+              onClick={toggleMic}
+              className="p-3 rounded-full bg-gray-100 hover:bg-blue-100"
+              title="Toggle Microphone"
+            >
+              {micEnabled ? (
+                <MicrophoneIcon className="h-6 w-6 text-gray-700" />
+              ) : (
+                <MicrophoneIcon className="h-6 w-6 text-red-500 line-through" />
+              )}
+            </button>
+            <button
+              onClick={toggleCamera}
+              className="p-3 rounded-full bg-gray-100 hover:bg-blue-100"
+              title="Toggle Camera"
+            >
+              {camEnabled ? (
+                <CameraIcon className="h-6 w-6 text-gray-700" />
+              ) : (
+                <CameraIcon className="h-6 w-6 text-red-500 line-through" />
+              )}
+            </button>
+            <button
+              onClick={handleEndCall}
+              className="p-3 rounded-full bg-red-500 hover:bg-red-600"
+              title="End Call"
+            >
+              <PhoneXMarkIcon className="h-6 w-6 text-white" />
+            </button>
           </div>
         </div>
       )}
