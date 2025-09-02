@@ -18,7 +18,7 @@ class PeerService {
 
   async getOffer() {
     if (this.peer) {
-      const offer = await this.peer.createOffer(); 
+      const offer = await this.peer.createOffer();
       await this.peer.setLocalDescription(offer);
       return offer;
     }
@@ -35,10 +35,10 @@ class PeerService {
 
   async setLocalDescription(offer) {
     if (this.peer) {
-      console.log('CALLED')
       await this.peer.setRemoteDescription(new RTCSessionDescription(offer));
     }
   }
+
 }
 
 export default typeof window !== "undefined" ? new PeerService() : null;

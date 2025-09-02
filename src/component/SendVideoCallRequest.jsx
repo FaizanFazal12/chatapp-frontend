@@ -97,8 +97,6 @@ const SendVideoCallRequest = () => {
       if (remoteSteam) {
         setRemoteStream(null);
       }
-
-      // peer.close();
     },
     [myStream, remoteSteam, socket, user, userId]
   );
@@ -124,16 +122,12 @@ const SendVideoCallRequest = () => {
 
   // ❌ End call
   const handleEndCall = useCallback(async () => {
-    if (myStream) {
-      myStream.getTracks().forEach((track) => track.stop());
-      setMyStream(null);
-    }
-    if (remoteSteam) {
-      remoteSteam.getTracks().forEach((track) => track.stop());
-      setRemoteStream(null);
-    }
+    await myStream.getTracks().forEach((track) => track.stop());
+
+    setRemoteStream(null);
+    setMyStream(null);
+
     socket.emit("call:end", { from: user.id, to: userId });
-    // peer.close();
   }, [myStream, remoteSteam]);
 
   const handleAcceptNego = useCallback(

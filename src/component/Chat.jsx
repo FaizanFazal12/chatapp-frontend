@@ -25,6 +25,9 @@ const Chat = ({ sender, selectedUser }) => {
   const [audioBlob, setAudioBlob] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [
     sendMessageWithAttachment,
@@ -61,6 +64,31 @@ const Chat = ({ sender, selectedUser }) => {
     setMessages((prev) => [...prev, newMessage]);
   }, []);
 
+  const handleTyping = (e) => {
+    setMessage(e.target.value);
+
+    if (!isTyping) {
+      setIsTyping(true);
+      socket.emit("typing", {
+        chat_id: data?.chat?.id,
+        sender_id: user?.id,
+        receiver_id: selectedUser?.id,
+      });
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      socket.emit("stop_typing", {
+        chat_id: data?.chat?.id,
+        sender_id: user?.id,
+        receiver_id: selectedUser?.id,
+      });
+    }, 2000);
+  };
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -160,6 +188,27 @@ const Chat = ({ sender, selectedUser }) => {
     }
   }, [data?.messages]);
 
+  useEffect(() => {
+    if (!socket || !data?.chat?.id) return;
+
+    socket.on("typing", (payload) => {
+      if (payload.sender_id === selectedUser?.id) {
+        setOtherUserTyping(true);
+      }
+    });
+
+    socket.on("stop_typing", (payload) => {
+      if (payload.sender_id === selectedUser?.id) {
+        setOtherUserTyping(false);
+      }
+    });
+
+    return () => {
+      socket.off("typing");
+      socket.off("stop_typing");
+    };
+  }, [socket, data?.chat?.id, selectedUser?.id]);
+
   if (!selectedUser) {
     return (
       <section className="flex-1 p-8 bg-white h-screen overflow-y-auto">
@@ -177,8 +226,7 @@ const Chat = ({ sender, selectedUser }) => {
         <h2 className="text-lg font-semibold text-gray-800">
           Chat with {selectedUser.name}
         </h2>
-      <SendVideoCallRequest/>
-
+        <SendVideoCallRequest />
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto space-y-3">
@@ -240,12 +288,18 @@ const Chat = ({ sender, selectedUser }) => {
           );
         })}
         <div ref={messagesEndRef} />
+             {otherUserTyping && (
+          <div className="px-4 py-2 text-sm text-gray-500 italic">
+            {selectedUser?.name} is typing...
+          </div>
+        )}
       </div>
 
       <form
         onSubmit={handleSendMessage}
         className="p-4 border-t border-gray-200 bg-white flex items-center gap-2"
       >
+   
         {audioBlob ? (
           <div className="flex items-center gap-2">
             <audio
@@ -313,7 +367,7 @@ const Chat = ({ sender, selectedUser }) => {
             <input
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleTyping}
               placeholder="Type a message..."
               className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
               disabled={!!audioBlob}
